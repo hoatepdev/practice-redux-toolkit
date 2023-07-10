@@ -1,0 +1,12 @@
+{
+  "posts": [
+    {
+      "description": "1",
+      "featuredImage": "https://unsplash.com/photos/qz5deY5CpBY",
+      "publishDate": "2023-06-29T21:30",
+      "published": true,
+      "title": "1",
+      "id": 1
+    }
+  ]
+}
