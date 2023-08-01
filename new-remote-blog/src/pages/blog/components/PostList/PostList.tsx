@@ -2,28 +2,23 @@ import PostItem from '../PostItem'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState, useAppDispatch } from 'store'
 import React, { useEffect } from 'react'
-import { deletePost, getPostList, startEditingPost } from 'pages/blog/blog.slice'
 import SkeletonPost from '../SkeletonPost'
-import { useGetPostsQuery } from 'pages/blog/blog.service'
+import {useDeletePostMutation, useGetPostsQuery} from 'pages/blog/blog.service'
+import {startEditPost} from "../../blog.slice";
 
 export default function PostList() {
-  const postList = useSelector((state: RootState) => state.blog.postList)
-  const loading = useSelector((state: RootState) => state.blog.loading)
-  
   const dispatch = useAppDispatch()
-  const handleDelete = (postId: string) => {
-    dispatch(deletePost(postId))
-  }
-  const handleStartEditing = (postId: string) => {
-    dispatch(startEditingPost(postId))
-  }
- 
-  // useEffect(() => {
-  //   const promise = dispatch(getPostList())
-  //   return () => {
-  //     promise.abort()
-  //   }
-  // }, [])
+const [deletePost] = useDeletePostMutation()
+
+const startEdit = (id: string) => {
+  dispatch(startEditPost(id))
+}
+
+const handleDeletePost = (id: string) => {
+  deletePost(id)
+}
+
+
 
   const {data, isLoading, isFetching} = useGetPostsQuery()
 
@@ -46,7 +41,8 @@ export default function PostList() {
             <SkeletonPost/>
           </> : !isFetching && data?.map((post) => (
             <PostItem post={post} key={post.id} 
-              handleDelete={handleDelete} handleStartEditing={handleStartEditing} 
+              startEdit={startEdit}
+                      handleDeletePost={handleDeletePost}
             />
           ))}
         </div>

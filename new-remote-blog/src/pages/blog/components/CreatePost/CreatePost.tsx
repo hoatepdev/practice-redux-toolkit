@@ -1,17 +1,17 @@
 import { unwrapResult } from '@reduxjs/toolkit'
-import { addPost, cancelEditingPost, updatePost } from 'pages/blog/blog.slice'
 import { Fragment, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState, useAppDispatch } from 'store'
 import { Post } from 'types/blog.type'
+import {useAddPostsMutation, useGetPostQuery, useUpdatePostMutation} from "pages/blog/blog.service"
+import {cancelEditPost} from "../../blog.slice";
 
-const initialState: Post = {
+const initialState: Omit<Post, 'id'> = {
   description: '',
   featuredImage: '',
   publishDate: '',
   published: false,
-  title: '',
-  id: ""
+  title: ''
 }
 
 interface ErrorForm {
@@ -19,46 +19,35 @@ interface ErrorForm {
 }
 
 export default function CreatePost() {
-  const [formData, setFormData] = useState<Post>(initialState)
-  const editingPost = useSelector((state: RootState) => state.blog.editingPost)
+  const [formData, setFormData] = useState<Omit<Post, 'id'> | Post>(initialState)
+  // const editingPost = useSelector((state: RootState) => state.blog.editingPost)
   const [errorForm, setErrorForm] = useState<null | ErrorForm>(null)
-  
+  const postId = useSelector((state: RootState) => state.blog.postId)
+  const [addPost, addPostResult] = useAddPostsMutation()
+  const {data} = useGetPostQuery(postId, {skip: !postId})
+  const [updatePost, updatePostResult] = useUpdatePostMutation()
+
   const dispatch = useAppDispatch()
 
   useEffect(() => {
-    setFormData(editingPost || initialState)
-  }, [editingPost])
+    if (data) {
+      setFormData(data)
+    }
+  }, [data])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (editingPost) {
-      dispatch(updatePost({postId: editingPost.id, body: formData}))
-      .unwrap()
-      .then((res) => {
-        setFormData(initialState)
-        if(errorForm) {
-          setErrorForm(null)
-        }
-      })
-      .catch(err => setErrorForm(err.error))
+    if (postId) {
+      await updatePost({body: formData as Post, id: postId}).unwrap()
+      setFormData(initialState)
     } else {
-      try {
-        const res = await dispatch(addPost(formData))
-        unwrapResult(res)
-        setFormData(initialState)
-        if(errorForm) {
-          setErrorForm(null)
-        }
-      } catch (err: any) {
-        setErrorForm(err.error)
-      }
-
-      
+      addPost(formData).unwrap()
+      setFormData(initialState)
     }
   }
 
   const handleCancelEditingPost = () => {
-    dispatch(cancelEditingPost())
+    dispatch(cancelEditPost())
   }
 
   return (
@@ -139,7 +128,7 @@ export default function CreatePost() {
         </label>
       </div>
       <div>
-        {editingPost && (
+        {Boolean(postId) && (
           <Fragment>
             <button
               type='submit'
@@ -159,7 +148,7 @@ export default function CreatePost() {
             </button>
           </Fragment>
         )}
-        {!editingPost && (
+        {!Boolean(postId) && (
           <button
             className='group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-purple-600 to-blue-500 p-0.5 text-sm font-medium text-gray-900 hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-300 group-hover:from-purple-600 group-hover:to-blue-500 dark:text-white dark:focus:ring-blue-800'
             type='submit'

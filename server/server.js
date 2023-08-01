@@ -19,6 +19,9 @@ server.use((req, res, next) => {
     req.body.createdAt = Date.now();
   }
   // Continue to JSON Server router
+
+  // setTimeout(() => {
+  // }, 1000);
   next();
 });
 
@@ -32,10 +35,11 @@ server.use((req, res, next) => {
       });
     }
   }
+  next();
 });
 
 // Use default router
 server.use(router);
 server.listen(4000, () => {
-  console.log("JSON Server is running");
+  console.log("JSON Server is running", 4000);
 });
