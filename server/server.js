@@ -34,6 +34,11 @@ server.use((req, res, next) => {
         },
       });
     }
+    if (req.body.title === "error") {
+      return res.status(500).send({
+        message: "Server die",
+      });
+    }
   }
   next();
 });

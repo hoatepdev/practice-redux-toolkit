@@ -1,10 +1,12 @@
 import { unwrapResult } from '@reduxjs/toolkit'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState, useAppDispatch } from 'store'
 import { Post } from 'types/blog.type'
-import {useAddPostsMutation, useGetPostQuery, useUpdatePostMutation} from "pages/blog/blog.service"
-import {cancelEditPost} from "../../blog.slice";
+import { useAddPostsMutation, useGetPostQuery, useUpdatePostMutation } from 'pages/blog/blog.service'
+import { cancelEditPost } from '../../blog.slice'
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { isEntityError } from '../../../../utils/helpers'
 
 const initialState: Omit<Post, 'id'> = {
   description: '',
@@ -13,21 +15,34 @@ const initialState: Omit<Post, 'id'> = {
   published: false,
   title: ''
 }
+/*
+ * Mẹo copy các key của kiểu Omit<Post, 'id> để làm key chop các kiểu FormError
+ * */
 
-interface ErrorForm {
-  publishDate: string
-}
+type FormError =
+  | {
+      [key in keyof typeof initialState]: string
+    }
+  | null
 
 export default function CreatePost() {
   const [formData, setFormData] = useState<Omit<Post, 'id'> | Post>(initialState)
-  // const editingPost = useSelector((state: RootState) => state.blog.editingPost)
-  const [errorForm, setErrorForm] = useState<null | ErrorForm>(null)
   const postId = useSelector((state: RootState) => state.blog.postId)
   const [addPost, addPostResult] = useAddPostsMutation()
-  const {data} = useGetPostQuery(postId, {skip: !postId})
+  const { data } = useGetPostQuery(postId, { skip: !postId })
   const [updatePost, updatePostResult] = useUpdatePostMutation()
 
   const dispatch = useAppDispatch()
+
+  const errorForm: FormError = useMemo(() => {
+    const errorResult = postId ? updatePostResult.error : addPostResult.error
+
+    if (isEntityError(errorResult)) {
+      return errorResult.data.error as FormError
+    }
+
+    return null
+  }, [postId, updatePostResult, addPostResult])
 
   useEffect(() => {
     if (data) {
@@ -37,12 +52,16 @@ export default function CreatePost() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (postId) {
-      await updatePost({body: formData as Post, id: postId}).unwrap()
-      setFormData(initialState)
-    } else {
-      addPost(formData).unwrap()
-      setFormData(initialState)
+    try {
+      if (postId) {
+        await updatePost({ body: formData as Post, id: postId }).unwrap()
+        setFormData(initialState)
+      } else {
+        addPost(formData).unwrap()
+        setFormData(initialState)
+      }
+    } catch (error) {
+      console.log(error)
     }
   }
 
@@ -97,23 +116,34 @@ export default function CreatePost() {
         </div>
       </div>
       <div className='mb-6'>
-        <label htmlFor='publishDate' className={`mb-2 block text-sm font-medium text-gray-900 dark:text-gray-300 ${errorForm?.publishDate ? 'text-red-700' : 'text-gray-900'}`}>
+        <label
+          htmlFor='publishDate'
+          className={`mb-2 block text-sm font-medium text-gray-900 dark:text-gray-300 ${
+            errorForm?.publishDate ? 'text-red-700' : 'text-gray-900'
+          }`}
+        >
           Publish Date
         </label>
         <input
           type='datetime-local'
           id='publishDate'
           className={`block w-56 rounded-lg border  p-2.5 text-sm focus:outline-none 
-          ${errorForm?.publishDate ? 'border-red-500 bg-red-50 text-red-900 placeholder-red-700 focus:border-red-500 focus:ring-red-500' :'border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500  focus:ring-blue-500'}`}
+          ${
+            errorForm?.publishDate
+              ? 'border-red-500 bg-red-50 text-red-900 placeholder-red-700 focus:border-red-500 focus:ring-red-500'
+              : 'border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500  focus:ring-blue-500'
+          }`}
           placeholder='Title'
           required
           value={formData.publishDate}
           onChange={(event) => setFormData((prev: any) => ({ ...prev, publishDate: event.target.value }))}
         />
-        {errorForm?.publishDate && <p className='mt-2 text-sm text-red-600'>
-          <span className='font-medium'>
-            Lỗi! &nbsp; 
-            </span>{errorForm.publishDate }</p>}
+        {errorForm?.publishDate && (
+          <p className='mt-2 text-sm text-red-600'>
+            <span className='font-medium'>Lỗi! &nbsp;</span>
+            {errorForm.publishDate}
+          </p>
+        )}
       </div>
       <div className='mb-6 flex items-center'>
         <input
