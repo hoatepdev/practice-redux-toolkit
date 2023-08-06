@@ -7,7 +7,14 @@ import { CustomerError } from '../../utils/helpers'
 export const blogApi = createApi({
   reducerPath: 'blogApi', // Tên field trong redux state
   tagTypes: ['Posts'], // Những kiểu tag cho phép dùng trong blogApi
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:4000/' }),
+  keepUnusedDataFor: 10, // Giữ data trong 10s sẽ xoá (mặc định 60s)
+  baseQuery: fetchBaseQuery({
+    baseUrl: 'http://localhost:4000/',
+    prepareHeaders(headers) {
+      headers.set('authorization', 'Bearer ASD')
+      return headers
+    }
+  }),
   endpoints: (builder) => ({
     // generic type theo thứ tự là kiểu response trả về và argument
     getPosts: builder.query<Post[], void>({
@@ -60,7 +67,16 @@ export const blogApi = createApi({
       invalidatesTags: (result, error, body) => (error ? [] : [{ type: 'Posts', id: 'LIST' }])
     }),
     getPost: builder.query<Post, string>({
-      query: (id) => `posts/${id}`
+      query: (id) => ({
+        url: `posts/${id}`,
+        headers: {
+          paramHeader: 'test'
+        },
+        params: {
+          first_name: 'hoa',
+          last_name: 'tep'
+        }
+      })
     }),
     updatePost: builder.mutation<Post, { id: string; body: Post }>({
       query(data) {
